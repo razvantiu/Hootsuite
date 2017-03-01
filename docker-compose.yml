@@ -1,9 +1,16 @@
-scrapper:
+version: '3'
+services:
+  scrapper:
     build: ./scrapper
-web:
+    links:
+      - mongo
+  web:
     build: ./web
     ports:
         - "5000:5000"
-mongo:
+    links:
+      - mongo
+  mongo:
     image: "mongo"
-
+    ports:
+        - "27017:27017"
