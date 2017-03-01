@@ -4,6 +4,7 @@ import logging
 import time
 
 import praw
+import prawcore
 
 from mongoengine import connect
 from mongoengine.errors import ValidationError
@@ -62,9 +63,32 @@ class Scrapper(object):
                 self.last_read = now
 
     def read_subreddits_content(self, now, then):
+        self.update_existing_submissions_comments()
+        logging.info('Update existing comments at: ' + str(now))
         for subreddit in self.subreddits:
             self.read_subreddit_submissions(subreddit, now, then)
         logging.info('Subreddits processed at timestamp: ' + str(now))
+
+    def update_existing_submissions_comments(self):
+        for submission in Submission.objects:
+            last_comment = Comment.objects(submission_id=submission.id).order_by('timestamp').first()
+            if last_comment:
+                reddit_submission = self.reddit.submission(submission.id)
+                try:
+                    reddit_submission.author
+                # submission was deleted
+                except prawcore.exceptions.NotFound:
+                    logging.debug('Submission %s was deleted', submission.id)
+                    continue
+                except prawcore.exceptions.Forbidden:
+                    logging.debug('Access restricted for submission %s', submission.id)
+                    continue
+                except Exception as exc:
+                    logging.debug(exc.message)
+                    continue
+
+                self.read_submission_comments(reddit_submission, submission.subreddit,
+                                              submission.id, timestamp=last_comment.timestamp)
 
     def read_subreddit_submissions(self, subreddit_name, now, then):
         subreddit = self.reddit.subreddit(subreddit_name)
@@ -84,14 +108,17 @@ class Scrapper(object):
             except Exception as exc:
                 logging.debug(exc.message)
                 continue
-            self.read_submission_comments(submission, subreddit_name)
+            self.read_submission_comments(submission, subreddit_name, submission.id)
 
-    def read_submission_comments(self, submission, subreddit_name):
+    def read_submission_comments(self, submission, subreddit_name, submission_id, timestamp=None):
         submission.comment_sort = 'new'
         all_comments = submission.comments.list()
         for comment in all_comments:
             try:
-                self.comment_save(comment.id, subreddit_name, comment.body, comment.created_utc)
+                if timestamp and comment.created_utc <= timestamp:
+                    break
+                self.comment_save(comment.id, submission_id, subreddit_name,
+                                  comment.body, comment.created_utc)
             except ValidationError:
                 logging.debug(
                     'Key: ' + comment.id + '\n' +
@@ -102,9 +129,9 @@ class Scrapper(object):
             except Exception as exc:
                 logging.debug(exc.message)
                 continue
-            self.read_comment_replies(comment, subreddit_name)
+            self.read_comment_replies(comment, subreddit_name, submission_id)
 
-    def read_comment_replies(self, comment, subreddit_name):
+    def read_comment_replies(self, comment, subreddit_name, submission_id, timestamp=None):
         comment_forest = comment.replies
         result = comment_forest.replace_more()
         while result:
@@ -112,7 +139,10 @@ class Scrapper(object):
 
         for reply_comment in comment_forest.list():
             try:
+                if timestamp and reply_comment.created_utc <= timestamp:
+                    continue
                 self.comment_save(reply_comment.id,
+                                  submission_id,
                                   subreddit_name,
                                   reply_comment.body,
                                   reply_comment.created_utc)
@@ -135,10 +165,10 @@ class Scrapper(object):
                    submission_title, submission_timestamp).save()
 
     @staticmethod
-    def comment_save(comment_id, subreddit_name,
+    def comment_save(comment_id, submission_id, subreddit_name,
                      comment_body, comment_timestamp):
 
-        Comment(comment_id, subreddit_name,
+        Comment(comment_id, submission_id, subreddit_name,
                 comment_body, comment_timestamp).save()
 
 
