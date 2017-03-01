@@ -17,6 +17,7 @@ class Submission(Document):
 
 class Comment(Document):
     id = StringField(primary_key=True,  max_length=10, required=True)
+    submission_id = StringField(max_length=10, required=True)
     subreddit = StringField(max_length=200, required=True)
     content = StringField(max_length=1000, required=True)
     timestamp = FloatField(required=True)
