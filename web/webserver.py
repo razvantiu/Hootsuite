@@ -51,7 +51,7 @@ def web_server():
         raise InvalidUsage('Invalid type for from or to parameters')
 
     # create a MongoConnection
-    mongo_client = MongoClient(settings.database_ip, settings.database_port)
+    mongo_client = MongoClient(settings.database_host, settings.database_port)
     database = mongo_client[settings.database_name]
     query = {
         'subreddit': subreddit,
