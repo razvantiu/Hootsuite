@@ -50,10 +50,11 @@ class ScrapperTestCase(unittest.TestCase):
         subreddit_name = self.scrapper.subreddits[0]
         # get a random key
         comment_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in xrange(6))
+        submission_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in xrange(6))
         comment_title = 'TestComment'
         comment_timestamp = time()
-        self.scrapper.comment_save(comment_id, subreddit_name,
-                                   comment_title, comment_timestamp)
+        self.scrapper.comment_save(comment_id, submission_id,
+                                   subreddit_name, comment_title, comment_timestamp)
 
 
 def suite():
