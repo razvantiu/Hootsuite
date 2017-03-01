@@ -78,13 +78,13 @@ class Scrapper(object):
                     reddit_submission.author
                 # submission was deleted
                 except prawcore.exceptions.NotFound:
-                    logging.debug('Submission %s was deleted', submission.id)
+                    logging.error('Submission %s was deleted', submission.id)
                     continue
                 except prawcore.exceptions.Forbidden:
-                    logging.debug('Access restricted for submission %s', submission.id)
+                    logging.error('Access restricted for submission %s', submission.id)
                     continue
                 except Exception as exc:
-                    logging.debug(exc.message)
+                    logging.error(exc.message)
                     continue
 
                 self.read_submission_comments(reddit_submission, submission.subreddit,
@@ -99,14 +99,14 @@ class Scrapper(object):
                                      submission.title,
                                      submission.created_utc)
             except ValidationError:
-                logging.debug(
+                logging.error(
                     'Key: ' + submission.id + '\n' +
                     'Subreddit name: ' + str(len(subreddit_name)) + '\n'
                     'Title length: ' + str(len(submission.title))
                 )
-                continue
+                raise Exception
             except Exception as exc:
-                logging.debug(exc.message)
+                logging.error(exc.message)
                 continue
             self.read_submission_comments(submission, subreddit_name, submission.id)
 
@@ -120,14 +120,14 @@ class Scrapper(object):
                 self.comment_save(comment.id, submission_id, subreddit_name,
                                   comment.body, comment.created_utc)
             except ValidationError:
-                logging.debug(
+                logging.error(
                     'Key: ' + comment.id + '\n' +
                     'Subreddit name: ' + str(len(subreddit_name)) + '\n'
                     'Body length: ' + str(len(comment.body))
                 )
                 continue
             except Exception as exc:
-                logging.debug(exc.message)
+                logging.error(exc.message)
                 continue
             self.read_comment_replies(comment, subreddit_name, submission_id)
 
@@ -147,14 +147,14 @@ class Scrapper(object):
                                   reply_comment.body,
                                   reply_comment.created_utc)
             except ValidationError:
-                logging.debug(
+                logging.error(
                     'Key: ' + reply_comment.id + '\n' +
                     'Subreddit name: ' + str(len(subreddit_name)) + '\n'
                     'Body length: ' + str(len(reply_comment.body))
                 )
                 continue
             except Exception as exc:
-                logging.debug(exc.message)
+                logging.error(exc.message)
                 continue
 
     @staticmethod
@@ -181,5 +181,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exc:
-        logging.debug(exc.message)
+        logging.error(exc.message)
         main()
