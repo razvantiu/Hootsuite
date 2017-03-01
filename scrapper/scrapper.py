@@ -34,7 +34,7 @@ class Scrapper(object):
     @staticmethod
     def create_mongo_connection():
         mongo_client = connect(settings.database_name,
-                               host=settings.database_ip,
+                               host=settings.database_host,
                                port=settings.database_port)
         return mongo_client
 
